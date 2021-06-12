@@ -1,5 +1,7 @@
 package ivan.projects.hakatonbackend.security
 
+import org.springframework.http.HttpStatus
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
 import javax.servlet.FilterChain
 import javax.servlet.http.HttpServletRequest
@@ -12,11 +14,12 @@ import javax.servlet.http.HttpServletResponse
  * поскольку данный фильтр должен быть перед всеми остальными,
  * для этого используется другой механизм
  */
-class JwtTokenFilter : OncePerRequestFilter() {
+class JwtTokenFilter(
     /**
      * Cюда нужно заинжектить jwtTokenProvider
      */
-
+    private val jwtTokenProvider: JwtTokenProvider
+) : OncePerRequestFilter() {
     override fun doFilterInternal(httpServletRequest:  HttpServletRequest,
                                   httpServletResponse: HttpServletResponse,
                                   chain: FilterChain) {
@@ -24,6 +27,16 @@ class JwtTokenFilter : OncePerRequestFilter() {
          * Делегируем разрешение токена токен провайдеру
          * val token = jwtTokenProvider.resolverToken(httpServletRequest)
          */
+        val token = jwtTokenProvider.resolverToken(httpServletRequest)
+        try{
+            val auth = jwtTokenProvider.getAuthentication(token!!)
+            SecurityContextHolder.getContext().authentication = auth
+        }
+        catch(Ex : Exception){
+            SecurityContextHolder.clearContext()
+            httpServletResponse.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid token")
+            return;
+        }
         // =========================
         /**
          * try{
@@ -37,5 +50,6 @@ class JwtTokenFilter : OncePerRequestFilter() {
          *     httpServletResponse.sendError(ex.httpStatus.value, ex.message)
          *
          */
+        chain.doFilter(httpServletRequest, httpServletResponse)
     }
 }

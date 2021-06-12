@@ -3,6 +3,8 @@ package ivan.projects.hakatonbackend.security
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import ivan.projects.hakatonbackend.exception.CustomException
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.stereotype.Component
 import java.util.*
@@ -33,8 +35,9 @@ class JwtTokenProvider(
             .signWith(SignatureAlgorithm.HS256, secretKey)
             .compact()
     }
-    fun getAuthentication(token : String){
-        val userDetails = myUserDetailsService
+    fun getAuthentication(token : String): Authentication {
+        val userDetails = myUserDetailsService.loadUserByUsername(getUsername(token))
+        return UsernamePasswordAuthenticationToken(userDetails, "", userDetails.authorities)
     }
     fun getUsername(token : String) : String{
         return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).body.subject
